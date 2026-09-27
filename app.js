@@ -65,6 +65,58 @@ function collectHeaders() {
   return headers;
 }
 
+// --- Copy as cURL ---
+function buildCurlCommand() {
+  const url = urlInput.value.trim();
+  const method = methodSelect.value;
+  const headers = collectHeaders();
+  const hasBody = !METHODS_WITHOUT_BODY.includes(method) && bodyTextarea.value.trim();
+
+  let parts = [`curl -X ${method}`];
+
+  parts.push(`'${url}'`);
+
+  Object.entries(headers).forEach(([key, value]) => {
+    parts.push(`-H '${key}: ${value}'`);
+  });
+
+  if (hasBody) {
+    const escapedBody = bodyTextarea.value.replace(/'/g, `'\\''`);
+    parts.push(`-d '${escapedBody}'`);
+  }
+
+  return parts.join(' \\\n  ');
+}
+
+const copyCurlBtn = document.getElementById('copy-curl');
+
+copyCurlBtn.addEventListener('click', async () => {
+  const url = urlInput.value.trim();
+
+  if (!url) {
+    copyCurlBtn.textContent = 'No URL set';
+    setTimeout(() => (copyCurlBtn.textContent = 'Copy as cURL'), 1500);
+    return;
+  }
+
+  if (!isValidUrl(url)) {
+    copyCurlBtn.textContent = 'Invalid URL';
+    setTimeout(() => (copyCurlBtn.textContent = 'Copy as cURL'), 1500);
+    return;
+  }
+
+  const curl = buildCurlCommand();
+
+  try {
+    await navigator.clipboard.writeText(curl);
+    copyCurlBtn.textContent = 'Copied!';
+  } catch {
+    copyCurlBtn.textContent = 'Copy failed';
+  }
+
+  setTimeout(() => (copyCurlBtn.textContent = 'Copy as cURL'), 1500);
+});
+
 // --- URL validation ---
 function isValidUrl(str) {
   try {
