@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Debugger</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>$ api-debugger</h1>
+  </header>
+
+  <main>
+    <form id="request-form">
+      <div class="row">
+        <select id="method">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+        <input type="text" id="url" placeholder="https://api.example.com/endpoint">
+        <button type="submit">Send</button>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Headers</div>
+        <div id="headers-list">
+          <div class="header-row">
+            <input type="text" class="header-key" placeholder="Key">
+            <input type="text" class="header-value" placeholder="Value">
+          </div>
+        </div>
+        <button type="button" id="add-header">+ Add header</button>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Body</div>
+        <textarea id="request-body" placeholder='{ "example": "value" }'></textarea>
+      </div>
+    </form>
+
+    <section id="response-panel">
+      <!-- response will be rendered here in step 3 -->
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
