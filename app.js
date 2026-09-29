@@ -54,6 +54,82 @@ function syncBodyState() {
 methodSelect.addEventListener('change', syncBodyState);
 syncBodyState();
 
+// --- Request history ---
+const HISTORY_KEY = 'api-debugger-history';
+const MAX_HISTORY = 20;
+
+const historyList = document.getElementById('history-list');
+const clearHistoryBtn = document.getElementById('clear-history');
+
+function getHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveToHistory(entry) {
+  const history = getHistory();
+  history.unshift(entry); // newest first
+  if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = getHistory();
+
+  if (history.length === 0) {
+    historyList.innerHTML = `<div class="empty-body">(no requests yet)</div>`;
+    return;
+  }
+
+  historyList.innerHTML = history
+    .map((entry, i) => `
+      <div class="history-row" data-index="${i}">
+        <span class="history-method">${entry.method}</span>
+        <span class="history-url">${escapeHtml(entry.url)}</span>
+      </div>
+    `)
+    .join('');
+
+  document.querySelectorAll('.history-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const entry = getHistory()[Number(row.dataset.index)];
+      loadFromHistory(entry);
+    });
+  });
+}
+
+function loadFromHistory(entry) {
+  urlInput.value = entry.url;
+  methodSelect.value = entry.method;
+  syncBodyState();
+  bodyTextarea.value = entry.body || '';
+
+  // clear existing header rows, rebuild from saved entry
+  headersList.innerHTML = '';
+  const savedHeaders = Object.entries(entry.headers || {});
+  if (savedHeaders.length === 0) {
+    headersList.appendChild(createHeaderRow());
+  } else {
+    savedHeaders.forEach(([key, value]) => {
+      const row = createHeaderRow();
+      row.querySelector('.header-key').value = key;
+      row.querySelector('.header-value').value = value;
+      headersList.appendChild(row);
+    });
+  }
+}
+
+clearHistoryBtn.addEventListener('click', () => {
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+});
+
+renderHistory(); // populate on page load
+
 // --- Collect headers from the form ---
 function collectHeaders() {
   const headers = {};
@@ -231,6 +307,13 @@ form.addEventListener('submit', async (e) => {
       timeMs,
       bodyText,
       headers: res.headers
+    });
+
+    saveToHistory({
+      url,
+      method,
+      headers,
+      body: hasBody ? bodyTextarea.value : ''
     });
 
   } catch (err) {
