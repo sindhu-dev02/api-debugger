@@ -85,7 +85,7 @@ button:hover {
   margin-bottom: 6px;
 }
 
-.header-row {
+.header-row, .param-row {
   display: flex;
   gap: 8px;
   margin-bottom: 6px;
