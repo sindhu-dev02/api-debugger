@@ -39,6 +39,74 @@ document.querySelectorAll('.header-row').forEach(row => {
   row.appendChild(btn);
 });
 
+// --- Query params ---
+const paramsList = document.getElementById('params-list');
+const addParamBtn = document.getElementById('add-param');
+let syncingFromUrl = false; // guard against infinite loop between url <-> params
+
+function createParamRow(key = '', value = '') {
+  const row = document.createElement('div');
+  row.className = 'param-row'; // reuse existing header-row styling
+
+  row.innerHTML = `
+    <input type="text" class="param-key" placeholder="Key" value="${escapeAttr(key)}">
+    <input type="text" class="param-value" placeholder="Value" value="${escapeAttr(value)}">
+    <button type="button" class="remove-header">✕</button>
+  `;
+
+  row.querySelector('.param-key').addEventListener('input', syncUrlFromParams);
+  row.querySelector('.param-value').addEventListener('input', syncUrlFromParams);
+  row.querySelector('.remove-header').addEventListener('click', () => {
+    row.remove();
+    syncUrlFromParams();
+  });
+
+  return row;
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/"/g, '&quot;');
+}
+
+addParamBtn.addEventListener('click', () => {
+  paramsList.appendChild(createParamRow());
+});
+
+// Params -> URL
+function syncUrlFromParams() {
+  if (syncingFromUrl) return;
+
+  const base = urlInput.value.split('?')[0];
+  const pairs = [];
+
+  document.querySelectorAll('#params-list .param-row').forEach(row => {
+    const key = row.querySelector('.param-key').value.trim();
+    const value = row.querySelector('.param-value').value;
+    if (key) pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+  });
+
+  urlInput.value = pairs.length ? `${base}?${pairs.join('&')}` : base;
+}
+
+// URL -> Params
+function syncParamsFromUrl() {
+  syncingFromUrl = true;
+
+  const [, queryString] = urlInput.value.split('?');
+  paramsList.innerHTML = '';
+
+  if (queryString) {
+    const usp = new URLSearchParams(queryString);
+    usp.forEach((value, key) => {
+      paramsList.appendChild(createParamRow(key, value));
+    });
+  }
+
+  syncingFromUrl = false;
+}
+
+urlInput.addEventListener('input', syncParamsFromUrl);
+
 // --- Disable body for methods that don't use one ---
 const METHODS_WITHOUT_BODY = ['GET', 'DELETE'];
 
