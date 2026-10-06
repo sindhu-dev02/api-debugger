@@ -263,3 +263,14 @@ details.section summary {
   color: var(--text-dim);
   font-style: italic;
 }
+
+button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: none;
+  color: var(--accent);
+}
+

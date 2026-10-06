@@ -43,6 +43,7 @@ document.querySelectorAll('.header-row').forEach(row => {
 const paramsList = document.getElementById('params-list');
 const addParamBtn = document.getElementById('add-param');
 let syncingFromUrl = false; // guard against infinite loop between url <-> params
+let lastRequest = null;
 
 function createParamRow(key = '', value = '') {
   const row = document.createElement('div');
@@ -197,6 +198,19 @@ clearHistoryBtn.addEventListener('click', () => {
 });
 
 renderHistory(); // populate on page load
+
+// --- Retry last request ---
+const retryBtn = document.getElementById('retry-btn');
+
+retryBtn.addEventListener('click', () => {
+  if (!lastRequest) return;
+  sendRequest({
+    url: lastRequest.url,
+    method: lastRequest.method,
+    headers: lastRequest.headers,
+    body: lastRequest.hasBody ? lastRequest.body : undefined
+  });
+});
 
 // --- Collect headers from the form ---
 function collectHeaders() {
@@ -373,7 +387,14 @@ form.addEventListener('submit', async (e) => {
 
   const headers = collectHeaders();
   const hasBody = !METHODS_WITHOUT_BODY.includes(method) && bodyTextarea.value.trim();
+  lastRequest = { url, method, headers, hasBody, body: bodyTextarea.value };
+  document.getElementById('retry-btn').disabled = false;
 
+  await sendRequest({ url, method, headers, body: hasBody ? bodyTextarea.value : undefined });
+});
+
+// --- Shared send logic (used by both Send and Retry) ---
+async function sendRequest({ url, method, headers, body }) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -385,7 +406,7 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch(url, {
       method,
       headers,
-      body: hasBody ? bodyTextarea.value : undefined,
+      body,
       signal: controller.signal
     });
 
@@ -401,12 +422,7 @@ form.addEventListener('submit', async (e) => {
       headers: res.headers
     });
 
-    saveToHistory({
-      url,
-      method,
-      headers,
-      body: hasBody ? bodyTextarea.value : ''
-    });
+    saveToHistory({ url, method, headers, body: body || '' });
 
   } catch (err) {
     clearTimeout(timeoutId);
@@ -420,4 +436,4 @@ form.addEventListener('submit', async (e) => {
       renderError('Unexpected error', err.message);
     }
   }
-});
+}
