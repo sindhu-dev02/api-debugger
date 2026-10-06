@@ -16,11 +16,14 @@ That's it. Everything runs client-side.
 
 ## Project structure
 
+```
+
 api-debugger/
 ├── index.html # form markup + layout
 ├── style.css # dark/amber theme, all component styling
 └── app.js # all behavior: requests, rendering, history, favorites
 
+```
 
 No build tooling, no package.json, no framework. Open `index.html` and it works.
 
