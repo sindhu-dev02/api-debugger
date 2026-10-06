@@ -297,7 +297,8 @@ function renderResponse({ status, statusText, timeMs, bodyText, headers }) {
   } else {
     try {
       const parsed = JSON.parse(bodyText);
-      bodyHtml = `<pre>${JSON.stringify(parsed, null, 2)}</pre>`;
+      const prettyJson = JSON.stringify(parsed, null, 2);
+      bodyHtml = `<pre>${syntaxHighlight(prettyJson)}</pre>`;
       parsedOk = true;
     } catch {
       bodyHtml = `<div class="parse-warning">Response is not valid JSON — showing raw text</div><pre>${escapeHtml(bodyText)}</pre>`;
@@ -328,6 +329,29 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// --- JSON syntax highlighting ---
+function syntaxHighlight(jsonString) {
+  const escaped = jsonString
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return escaped.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(\.\d+)?([eE][+-]?\d+)?)/g,
+    (match) => {
+      let cls = 'json-number';
+      if (/^"/.test(match)) {
+        cls = /:$/.test(match) ? 'json-key' : 'json-string';
+      } else if (/true|false/.test(match)) {
+        cls = 'json-boolean';
+      } else if (/null/.test(match)) {
+        cls = 'json-null';
+      }
+      return `<span class="${cls}">${match}</span>`;
+    }
+  );
 }
 
 // --- Main submit handler ---

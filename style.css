@@ -242,3 +242,24 @@ details.section summary {
   font-size: 12px;
   padding: 4px 8px;
 }
+
+.json-key {
+  color: var(--accent);
+}
+
+.json-string {
+  color: var(--status-2xx);
+}
+
+.json-number {
+  color: var(--status-3xx);
+}
+
+.json-boolean {
+  color: #c586c0;
+}
+
+.json-null {
+  color: var(--text-dim);
+  font-style: italic;
+}
