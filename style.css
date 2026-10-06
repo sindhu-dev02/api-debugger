@@ -297,3 +297,17 @@ button:disabled:hover {
   border-radius: 2px;
   padding: 0 2px;
 }
+
+.remove-favorite {
+  margin-left: auto;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.remove-favorite:hover {
+  background: var(--status-5xx);
+  border-color: var(--status-5xx);
+  color: var(--bg);
+}

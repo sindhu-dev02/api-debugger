@@ -199,6 +199,93 @@ clearHistoryBtn.addEventListener('click', () => {
 
 renderHistory(); // populate on page load
 
+// --- Favorites ---
+const FAVORITES_KEY = 'api-debugger-favorites';
+
+const favoritesList = document.getElementById('favorites-list');
+const saveFavoriteBtn = document.getElementById('save-favorite-btn');
+
+function getFavorites() {
+  try {
+    return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorites(favorites) {
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  renderFavorites();
+}
+
+function renderFavorites() {
+  const favorites = getFavorites();
+
+  if (favorites.length === 0) {
+    favoritesList.innerHTML = `<div class="empty-body">(no favorites yet)</div>`;
+    return;
+  }
+
+  favoritesList.innerHTML = favorites
+    .map((fav, i) => `
+      <div class="history-row" data-index="${i}">
+        <span class="history-method">${fav.method}</span>
+        <span class="history-url">${escapeHtml(fav.name)}</span>
+        <button type="button" class="remove-favorite" data-index="${i}">✕</button>
+      </div>
+    `)
+    .join('');
+
+  document.querySelectorAll('#favorites-list .history-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-favorite')) return;
+      const fav = getFavorites()[Number(row.dataset.index)];
+      loadFromHistory(fav);
+    });
+  });
+
+  document.querySelectorAll('.remove-favorite').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const favorites = getFavorites();
+      favorites.splice(Number(btn.dataset.index), 1);
+      saveFavorites(favorites);
+    });
+  });
+}
+
+saveFavoriteBtn.addEventListener('click', () => {
+  const url = urlInput.value.trim();
+
+  if (!url || !isValidUrl(url)) {
+    saveFavoriteBtn.textContent = 'Invalid URL';
+    setTimeout(() => (saveFavoriteBtn.textContent = '☆ Save'), 1500);
+    return;
+  }
+
+  const name = prompt('Name this request:', url);
+  if (!name) return; // cancelled
+
+  const method = methodSelect.value;
+  const headers = collectHeaders();
+  const hasBody = !METHODS_WITHOUT_BODY.includes(method) && bodyTextarea.value.trim();
+
+  const favorites = getFavorites();
+  favorites.push({
+    name,
+    url,
+    method,
+    headers,
+    body: hasBody ? bodyTextarea.value : ''
+  });
+  saveFavorites(favorites);
+
+  saveFavoriteBtn.textContent = 'Saved!';
+  setTimeout(() => (saveFavoriteBtn.textContent = '☆ Save'), 1500);
+});
+
+renderFavorites(); // populate on page load
+
 // --- Retry last request ---
 const retryBtn = document.getElementById('retry-btn');
 
