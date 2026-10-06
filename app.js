@@ -302,9 +302,17 @@ function statusClass(status) {
   return 'status-5xx';
 }
 
-function renderResponse({ status, statusText, timeMs, bodyText, headers }) {
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderResponse({ status, statusText, timeMs, bodyText, headers, sizeBytes }) {
   let bodyHtml;
   let parsedOk = false;
+  let searchBarHtml = '';
+  const sizeLabel = formatBytes(sizeBytes);
 
   if (!bodyText) {
     bodyHtml = `<div class="empty-body">(empty response body)</div>`;
@@ -312,8 +320,14 @@ function renderResponse({ status, statusText, timeMs, bodyText, headers }) {
     try {
       const parsed = JSON.parse(bodyText);
       const prettyJson = JSON.stringify(parsed, null, 2);
-      bodyHtml = `<pre>${syntaxHighlight(prettyJson)}</pre>`;
+      bodyHtml = `<pre id="response-pre">${syntaxHighlight(prettyJson)}</pre>`;
       parsedOk = true;
+      searchBarHtml = `
+        <div class="search-bar">
+          <input type="text" id="response-search" placeholder="Search in response...">
+          <span id="search-count"></span>
+        </div>
+      `;
     } catch {
       bodyHtml = `<div class="parse-warning">Response is not valid JSON — showing raw text</div><pre>${escapeHtml(bodyText)}</pre>`;
     }
@@ -327,9 +341,11 @@ function renderResponse({ status, statusText, timeMs, bodyText, headers }) {
     <div class="response-meta">
       <span class="status-pill ${statusClass(status)}">${status} ${statusText}</span>
       <span class="time-pill">${timeMs}ms</span>
+      <span class="time-pill">${sizeLabel}</span>
     </div>
     <div class="section">
       <div class="section-label">Body ${parsedOk ? '(JSON)' : ''}</div>
+      ${searchBarHtml}
       ${bodyHtml}
     </div>
     <details class="section">
@@ -337,6 +353,53 @@ function renderResponse({ status, statusText, timeMs, bodyText, headers }) {
       ${headersHtml || '<div class="empty-body">(no headers)</div>'}
     </details>
   `;
+
+  if (parsedOk) {
+    const searchInput = document.getElementById('response-search');
+    searchInput.addEventListener('input', () => highlightMatches(searchInput.value));
+  }
+}
+
+// --- Response search/highlight ---
+function highlightMatches(query) {
+  const pre = document.getElementById('response-pre');
+  const countEl = document.getElementById('search-count');
+  if (!pre) return;
+
+  // reset to the stored clean HTML before re-highlighting
+  if (!pre.dataset.original) {
+    pre.dataset.original = pre.innerHTML;
+  }
+  pre.innerHTML = pre.dataset.original;
+
+  if (!query.trim()) {
+    countEl.textContent = '';
+    return;
+  }
+
+  const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let node;
+  while ((node = walker.nextNode())) textNodes.push(node);
+
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  let matchCount = 0;
+
+  textNodes.forEach(textNode => {
+    const text = textNode.nodeValue;
+    if (!regex.test(text)) return;
+    regex.lastIndex = 0;
+
+    const matches = text.match(regex);
+    if (matches) matchCount += matches.length;
+
+    const span = document.createElement('span');
+    span.innerHTML = text.replace(regex, '<mark class="search-hit">$1</mark>');
+    textNode.replaceWith(span);
+  });
+
+  countEl.textContent = matchCount > 0 ? `${matchCount} match${matchCount !== 1 ? 'es' : ''}` : 'no matches';
 }
 
 function escapeHtml(str) {
@@ -413,13 +476,15 @@ async function sendRequest({ url, method, headers, body }) {
     clearTimeout(timeoutId);
     const timeMs = Math.round(performance.now() - startTime);
     const bodyText = await res.text();
+    const sizeBytes = new Blob([bodyText]).size;
 
     renderResponse({
       status: res.status,
       statusText: res.statusText,
       timeMs,
       bodyText,
-      headers: res.headers
+      headers: res.headers,
+      sizeBytes
     });
 
     saveToHistory({ url, method, headers, body: body || '' });
